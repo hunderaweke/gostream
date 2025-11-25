@@ -1,0 +1,29 @@
+syntax="proto3";
+
+package gostream.auth.v1;
+
+option go_package="github.com/hunderaweke/gostream";
+
+service AuthService{
+    rpc Login(UserCredentials)returns(AuthorizedUser);
+}
+message User{
+    string id = 1;
+    string username = 2;
+    string first_name = 3;
+    string last_name = 4;
+}
+
+message UserCredentials{
+    string username =1;
+    string password = 2; 
+}
+message TokenResponse{
+    string access_token = 1;
+    string refresh_token=2;
+}
+
+message AuthorizedUser{
+    TokenResponse token = 1;
+    User user = 2;
+}
