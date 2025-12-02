@@ -20,7 +20,7 @@ const (
 type TokenType string
 type UserClaims struct {
 	jwt.RegisteredClaims
-	ID uuid.UUID
+	ID   uuid.UUID
 	Type TokenType
 }
 
@@ -32,7 +32,7 @@ func GenerateToken(user domain.User, tokenType TokenType) (string, error) {
 	if tokenType == RefreshToken {
 		expiresAt = time.Now().Add(RefreshTokenDuration)
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, UserClaims{Type:tokenType,ID: user.ID, RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(expiresAt)}})
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, UserClaims{Type: tokenType, ID: user.ID, RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(expiresAt)}})
 	tokenStr, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
 		return "", fmt.Errorf("error signing the token %v", err)
@@ -41,13 +41,13 @@ func GenerateToken(user domain.User, tokenType TokenType) (string, error) {
 }
 func ValidateToken(tokenStr string, tokenType string) (*UserClaims, error) {
 	var claims UserClaims
-	token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, &claims, func(t *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error parsing the token string: %v", err)
 	}
-	if !token.Valid || claims.Type != TokenType(tokenType){
+	if !token.Valid || claims.Type != TokenType(tokenType) {
 		return nil, fmt.Errorf("invalid token")
 	}
 	return &claims, nil
