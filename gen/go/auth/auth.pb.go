@@ -7,6 +7,7 @@
 package authpb
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -338,7 +339,7 @@ var File_auth_proto protoreflect.FileDescriptor
 const file_auth_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"auth.proto\x12\x10gostream.auth.v1\"n\n" +
+	"auth.proto\x12\x10gostream.auth.v1\x1a\x1cgoogle/api/annotations.proto\"n\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x1d\n" +
@@ -357,10 +358,10 @@ const file_auth_proto_rawDesc = "" +
 	"\x0fValidateRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\"+\n" +
 	"\x10ValidateResponse\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId2\xae\x01\n" +
-	"\vAuthService\x12L\n" +
-	"\x05Login\x12!.gostream.auth.v1.UserCredentials\x1a .gostream.auth.v1.AuthorizedUser\x12Q\n" +
-	"\bValidate\x12!.gostream.auth.v1.ValidateRequest\x1a\".gostream.auth.v1.ValidateResponseB4Z2github.com/hunderaweke/gostream/gen/go/auth;authpbb\x06proto3"
+	"\auser_id\x18\x01 \x01(\tR\x06userId2\xe7\x01\n" +
+	"\vAuthService\x12g\n" +
+	"\x05Login\x12!.gostream.auth.v1.UserCredentials\x1a .gostream.auth.v1.AuthorizedUser\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/v1/auth/login\x12o\n" +
+	"\bValidate\x12!.gostream.auth.v1.ValidateRequest\x1a\".gostream.auth.v1.ValidateResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/auth/validateB4Z2github.com/hunderaweke/gostream/gen/go/auth;authpbb\x06proto3"
 
 var (
 	file_auth_proto_rawDescOnce sync.Once

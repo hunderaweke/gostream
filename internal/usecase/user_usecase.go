@@ -181,6 +181,9 @@ func (u *userUsecase) Login(username, password string) (*domain.User, error) {
 	if err != nil {
 		return nil, err
 	}
+	if user == nil {
+		return nil, fmt.Errorf("user not found")
+	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
 		return nil, err

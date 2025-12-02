@@ -2,13 +2,23 @@ syntax="proto3";
 
 package gostream.auth.v1;
 
-// 1. Point to the NEW folder where generated code will sit (e.g., gen/go/auth)
-// 2. Add ";authpb" to explicitly name the Go package "authpb" to avoid conflicts
 option go_package="github.com/hunderaweke/gostream/gen/go/auth;authpb";
 
+import "google/api/annotations.proto";
+
 service AuthService{
-    rpc Login(UserCredentials) returns (AuthorizedUser);
-    rpc Validate(ValidateRequest)returns(ValidateResponse);
+    rpc Login(UserCredentials) returns (AuthorizedUser){
+        option (google.api.http)={
+            post:"/v1/auth/login"
+            body:"*"
+        };
+    };
+    rpc Validate(ValidateRequest)returns(ValidateResponse){
+        option (google.api.http)={
+            post:"/v1/auth/validate"
+            body:"*"
+        };
+    };
 }
 
 message User{
