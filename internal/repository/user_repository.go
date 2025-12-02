@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -15,7 +16,16 @@ type GormUserRepository struct {
 	validate *validator.Validate
 }
 
+// passwordResetToken is an internal GORM model for storing one-time reset tokens.
+type passwordResetToken struct {
+	Token     string    `gorm:"primaryKey;column:token;size:128"`
+	UserID    uuid.UUID `gorm:"type:uuid;not null;index"`
+	ExpiresAt time.Time `gorm:"not null;index"`
+	CreatedAt time.Time
+}
+
 func NewUserRepository(db *gorm.DB) *GormUserRepository {
+	db.AutoMigrate(&domain.User{})
 	return &GormUserRepository{
 		db:       db,
 		validate: validator.New(),
@@ -111,4 +121,61 @@ func (r *GormUserRepository) GetAll(opts domain.UserFetchOptions) ([]domain.User
 		return nil, 0, fmt.Errorf("finding users: %w", err)
 	}
 	return users, total, nil
+}
+
+func (r *GormUserRepository) GetByUsername(username string) (*domain.User, error) {
+	if username == "" {
+		return nil, nil
+	}
+	var user domain.User
+	if err := r.db.First(&user, "username = ?", username).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get user by username: %w", err)
+	}
+	return &user, nil
+}
+
+func (r *GormUserRepository) SaveResetToken(token string, userID uuid.UUID, expiresAt time.Time) error {
+	if token == "" || userID == uuid.Nil {
+		return fmt.Errorf("invalid token or user id")
+	}
+	rec := &passwordResetToken{
+		Token:     token,
+		UserID:    userID,
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now().UTC(),
+	}
+	if err := r.db.Create(rec).Error; err != nil {
+		return fmt.Errorf("saving reset token: %w", err)
+	}
+	return nil
+}
+
+func (r *GormUserRepository) GetUserIDByResetToken(token string) (uuid.UUID, error) {
+	if token == "" {
+		return uuid.Nil, fmt.Errorf("token empty")
+	}
+	var rec passwordResetToken
+	if err := r.db.First(&rec, "token = ?", token).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return uuid.Nil, nil
+		}
+		return uuid.Nil, fmt.Errorf("looking up reset token: %w", err)
+	}
+	if rec.ExpiresAt.Before(time.Now().UTC()) {
+		return uuid.Nil, fmt.Errorf("token expired")
+	}
+	return rec.UserID, nil
+}
+
+func (r *GormUserRepository) DeleteResetToken(token string) error {
+	if token == "" {
+		return nil
+	}
+	if err := r.db.Delete(&passwordResetToken{}, "token = ?", token).Error; err != nil {
+		return fmt.Errorf("deleting reset token: %w", err)
+	}
+	return nil
 }

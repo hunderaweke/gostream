@@ -10,34 +10,29 @@ import (
 	"github.com/hunderaweke/gostream/internal/domain"
 )
 
-// UserUsecase contains business logic for users.
-type UserUsecase struct {
+type userUsecase struct {
 	repo         domain.UserRepository
 	validate     *validator.Validate
 	passwordCost int
 }
 
-// NewUserUsecase creates a new usecase with sensible defaults.
-func NewUserUsecase(repo domain.UserRepository) *UserUsecase {
-	return &UserUsecase{
+func NewUserUsecase(repo domain.UserRepository) domain.UserService {
+	return &userUsecase{
 		repo:         repo,
 		validate:     validator.New(),
 		passwordCost: bcrypt.DefaultCost,
 	}
 }
 
-// CreateUser validates, hashes password and persists a new user.
-func (u *UserUsecase) CreateUser(user *domain.User) error {
+func (u *userUsecase) CreateUser(user *domain.User) error {
 	if user == nil {
 		return fmt.Errorf("user is nil")
 	}
 
-	// validation: username and password required on create
 	if err := u.validate.Struct(user); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
-	// hash password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), u.passwordCost)
 	if err != nil {
 		return fmt.Errorf("hashing password: %w", err)
@@ -50,13 +45,11 @@ func (u *UserUsecase) CreateUser(user *domain.User) error {
 	return nil
 }
 
-// UpdateUser updates allowed fields. If Password is non-empty it will be hashed.
-func (u *UserUsecase) UpdateUser(user *domain.User) error {
+func (u *userUsecase) UpdateUser(user *domain.User) error {
 	if user == nil {
 		return fmt.Errorf("user is nil")
 	}
 
-	// Validate individual fields that are present.
 	if user.Username != "" {
 		if err := u.validate.Var(user.Username, "min=3,max=50"); err != nil {
 			return fmt.Errorf("invalid username: %w", err)
@@ -90,7 +83,7 @@ func (u *UserUsecase) UpdateUser(user *domain.User) error {
 	return nil
 }
 
-func (u *UserUsecase) DeleteUser(id uuid.UUID) error {
+func (u *userUsecase) DeleteUser(id uuid.UUID) error {
 	if id == uuid.Nil {
 		return fmt.Errorf("invalid id")
 	}
@@ -100,18 +93,97 @@ func (u *UserUsecase) DeleteUser(id uuid.UUID) error {
 	return nil
 }
 
-func (u *UserUsecase) GetUserByID(id uuid.UUID) (*domain.User, error) {
+func (u *userUsecase) GetUserByID(id uuid.UUID) (*domain.User, error) {
 	if id == uuid.Nil {
 		return nil, fmt.Errorf("invalid id")
 	}
 	return u.repo.GetByID(id)
 }
 
-// ListUsers returns a page of users and the total count for pagination.
-func (u *UserUsecase) ListUsers(opts domain.UserFetchOptions) ([]domain.User, int64, error) {
-	// apply sane defaults
+func (u *userUsecase) ListUsers(opts domain.UserFetchOptions) ([]domain.User, int64, error) {
 	if opts.Limit <= 0 && opts.Page <= 0 {
 		opts.Limit = 25
 	}
 	return u.repo.GetAll(opts)
+}
+
+func (u *userUsecase) Authenticate(username, password string) (*domain.User, error) {
+	if username == "" || password == "" {
+		return nil, fmt.Errorf("username and password required")
+	}
+	user, err := u.repo.GetByUsername(username)
+	if err != nil {
+		return nil, fmt.Errorf("lookup user: %w", err)
+	}
+	if user == nil {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+	return user, nil
+}
+
+func (u *userUsecase) ChangePassword(userID string, currentPassword, newPassword string) error {
+	id, err := uuid.Parse(userID)
+	if err != nil {
+		return fmt.Errorf("error parsing user id : %v", err)
+	}
+	if id == uuid.Nil {
+		return fmt.Errorf("invalid id")
+	}
+	if newPassword == "" {
+		return fmt.Errorf("new password required")
+	}
+	user, err := u.repo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("lookup user: %w", err)
+	}
+	if user == nil {
+		return fmt.Errorf("user not found")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(currentPassword)); err != nil {
+		return fmt.Errorf("current password incorrect")
+	}
+	if err := u.validate.Var(newPassword, "min=6"); err != nil {
+		return fmt.Errorf("invalid new password: %w", err)
+	}
+	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), u.passwordCost)
+	if err != nil {
+		return fmt.Errorf("hashing password: %w", err)
+	}
+	user.Password = string(hashed)
+	if err := u.repo.Update(user); err != nil {
+		return fmt.Errorf("update password: %w", err)
+	}
+	return nil
+}
+
+func (u *userUsecase) ResetPassword(username, newPassword string) error {
+	user, err := u.GetByUsername(username)
+	if err != nil {
+		return fmt.Errorf("error getting the user by username: %v", err)
+	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("error hashing password: %v", err)
+	}
+	user.Password = string(hashedPassword)
+
+	return nil
+}
+
+func (u *userUsecase) GetByUsername(username string) (*domain.User, error) {
+	return u.repo.GetByUsername(username)
+}
+func (u *userUsecase) Login(username, password string) (*domain.User, error) {
+	user, err := u.GetByUsername(username)
+	if err != nil {
+		return nil, err
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }

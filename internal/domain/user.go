@@ -23,6 +23,21 @@ type UserRepository interface {
 	Delete(id uuid.UUID) error
 	Update(user *User) error
 	GetByID(id uuid.UUID) (*User, error)
-	// GetAll returns a slice of users and the total count (for pagination)
+	GetByUsername(username string) (*User, error)
 	GetAll(opts UserFetchOptions) ([]User, int64, error)
+}
+
+// UserService defines the application-level behaviour for Users.
+// Keep the service contract in the domain so callers can depend on the
+// behaviour rather than concrete implementations.
+type UserService interface {
+	CreateUser(user *User) error
+	UpdateUser(user *User) error
+	DeleteUser(id uuid.UUID) error
+	GetUserByID(id uuid.UUID) (*User, error)
+	ListUsers(opts UserFetchOptions) ([]User, int64, error)
+	GetByUsername(username string) (*User, error)
+	Login(username, password string) (*User, error)
+	ResetPassword(username,newPassword string)error
+	ChangePassword(username,oldPassword,newPassword string)error
 }
