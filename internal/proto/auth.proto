@@ -13,9 +13,15 @@ service AuthService{
             body:"*"
         };
     };
-    rpc Validate(ValidateRequest)returns(ValidateResponse){
+    rpc Validate(ValidateRequest) returns (ValidateResponse){
         option (google.api.http)={
             post:"/v1/auth/validate"
+            body:"*"
+        };
+    };
+    rpc Register(UserRegisterRequest) returns (User){
+        option (google.api.http) = {
+            post: "/v1/auth/register"
             body:"*"
         };
     };
@@ -27,7 +33,12 @@ message User{
     string first_name = 3;
     string last_name = 4;
 }
-
+message UserRegisterRequest{
+    string username = 1;
+    string first_name = 2;
+    string last_name = 3; 
+    string password = 4;
+}
 message UserCredentials{
     string username = 1;
     string password = 2; 

@@ -12,6 +12,7 @@ type authService struct {
 	authpb.UnimplementedAuthServiceServer
 	usecase domain.UserService
 }
+
 func NewAuthService(usecase domain.UserService) authpb.AuthServiceServer {
 	return &authService{usecase: usecase}
 }
@@ -42,4 +43,23 @@ func (s *authService) Validate(ctx context.Context, req *authpb.ValidateRequest)
 		return nil, err
 	}
 	return &authpb.ValidateResponse{UserId: claims.ID.String()}, nil
+}
+
+func (s *authService) Register(ctx context.Context, req *authpb.UserRegisterRequest) (*authpb.User, error) {
+	user := domain.User{
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Password:  req.Password,
+		Username:  req.Username,
+	}
+	createdUser, err := s.usecase.CreateUser(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &authpb.User{
+		FirstName: createdUser.FirstName,
+		LastName:  createdUser.LastName,
+		Username:  createdUser.Username,
+		Id:        createdUser.ID.String(),
+	}, nil
 }

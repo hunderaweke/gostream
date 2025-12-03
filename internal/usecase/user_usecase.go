@@ -24,25 +24,22 @@ func NewUserUsecase(repo domain.UserRepository) domain.UserService {
 	}
 }
 
-func (u *userUsecase) CreateUser(user *domain.User) error {
+func (u *userUsecase) CreateUser(user *domain.User) (*domain.User, error) {
 	if user == nil {
-		return fmt.Errorf("user is nil")
+		return nil, fmt.Errorf("user is nil")
 	}
 
 	if err := u.validate.Struct(user); err != nil {
-		return fmt.Errorf("validation failed: %w", err)
+		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), u.passwordCost)
 	if err != nil {
-		return fmt.Errorf("hashing password: %w", err)
+		return nil, fmt.Errorf("hashing password: %w", err)
 	}
 	user.Password = string(hashed)
 
-	if err := u.repo.Create(user); err != nil {
-		return fmt.Errorf("create user: %w", err)
-	}
-	return nil
+	return u.repo.Create(user)
 }
 
 func (u *userUsecase) UpdateUser(user *domain.User) error {

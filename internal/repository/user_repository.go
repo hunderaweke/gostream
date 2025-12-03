@@ -32,19 +32,19 @@ func NewUserRepository(db *gorm.DB) *GormUserRepository {
 	}
 }
 
-func (r *GormUserRepository) Create(user *domain.User) error {
+func (r *GormUserRepository) Create(user *domain.User) (*domain.User, error) {
 	if user == nil {
-		return fmt.Errorf("user is nil")
+		return nil, fmt.Errorf("user is nil")
 	}
 
 	if err := r.validate.Struct(user); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := r.db.Create(user).Error; err != nil {
-		return fmt.Errorf("creating user: %w", err)
+		return nil, fmt.Errorf("creating user: %w", err)
 	}
-	return nil
+	return user, nil
 }
 
 func (r *GormUserRepository) Update(user *domain.User) error {

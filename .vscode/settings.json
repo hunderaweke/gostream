@@ -3,11 +3,13 @@
         "options": [
             "--proto_path=${workspaceRoot}/third_party",
             "--proto_path=${workspaceRoot}/internal/proto",
-           "--go_out=${workspaceRoot}/gen/go/auth",
+            "--go_out=${workspaceRoot}/gen/go/auth",
             "--go_opt=paths=source_relative",
+            "--go-grpc_out=${workspaceRoot}/gen/go/auth",
+            "--go-grpc_opt=paths=source_relative",
             "--grpc-gateway_opt=paths=source_relative",
-    "--grpc-gateway_opt=generate_unbound_methods=true",
-    "--grpc-gateway_out=${workspaceRoot}/gen/go/auth"
+            "--grpc-gateway_opt=generate_unbound_methods=true",
+            "--grpc-gateway_out=${workspaceRoot}/gen/go/auth"
         ]
     }
 }

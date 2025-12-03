@@ -19,7 +19,7 @@ type UserFetchOptions struct {
 }
 
 type UserRepository interface {
-	Create(user *User) error
+	Create(user *User) (*User, error)
 	Delete(id uuid.UUID) error
 	Update(user *User) error
 	GetByID(id uuid.UUID) (*User, error)
@@ -27,17 +27,14 @@ type UserRepository interface {
 	GetAll(opts UserFetchOptions) ([]User, int64, error)
 }
 
-// UserService defines the application-level behaviour for Users.
-// Keep the service contract in the domain so callers can depend on the
-// behaviour rather than concrete implementations.
 type UserService interface {
-	CreateUser(user *User) error
+	CreateUser(user *User) (*User, error)
 	UpdateUser(user *User) error
 	DeleteUser(id uuid.UUID) error
 	GetUserByID(id uuid.UUID) (*User, error)
 	ListUsers(opts UserFetchOptions) ([]User, int64, error)
 	GetByUsername(username string) (*User, error)
 	Login(username, password string) (*User, error)
-	ResetPassword(username,newPassword string)error
-	ChangePassword(username,oldPassword,newPassword string)error
+	ResetPassword(username, newPassword string) error
+	ChangePassword(username, oldPassword, newPassword string) error
 }
