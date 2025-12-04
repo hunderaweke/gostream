@@ -6,6 +6,8 @@ import (
 	authpb "github.com/hunderaweke/gostream/gen/go/auth"
 	"github.com/hunderaweke/gostream/internal/domain"
 	"github.com/hunderaweke/gostream/pkg/utils"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type authService struct {
@@ -19,7 +21,7 @@ func NewAuthService(usecase domain.UserService) authpb.AuthServiceServer {
 func (s *authService) Login(ctx context.Context, credentials *authpb.UserCredentials) (*authpb.AuthorizedUser, error) {
 	user, err := s.usecase.Login(credentials.GetUsername(), credentials.GetPassword())
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
 	accessToken, err := utils.GenerateToken(*user, utils.AccessToken)
 	if err != nil {

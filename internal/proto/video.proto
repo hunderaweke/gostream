@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package gostream.video.v1;
+
+option go_package = "github.com/hunderaweke/gostream/gen/go/video;videopb";
+
+import "google/api/annotations.proto";
+
+service VideoService {
+    rpc CreateVideo(CreateVideoRequest) returns (CreateVideoResponse) {
+        option (google.api.http) = {
+            post: "/v1/videos"
+            body: "*"
+        };
+    }
+    rpc CompleteUpload(CompleteUploadRequest) returns (CompleteUploadResponse) {
+        option (google.api.http) = {
+            post: "/v1/videos/{video_id}/complete"
+            body: "*"
+        };
+    }
+    rpc GetVideo(GetVideoRequest) returns (GetVideoResponse) {
+        option (google.api.http) = {
+            get: "/v1/videos/{video_id}"
+        };
+    }
+    rpc GetVideos(GetVideosRequest)returns(GetVideosResponse){
+        option (google.api.http) = {
+            get:"/v1/videos"
+        };
+    }
+}
+
+message GetVideosRequest{
+    int32 page = 1;
+    int32 limit = 2;
+    string query = 3;
+    string status = 4;
+    string user_id = 5;
+}
+message GetVideosResponse {
+    repeated Video videos = 1;
+    int64 total = 2;
+    int32 page = 3;
+    int32 limit = 4;
+}
+
+message CreateVideoRequest {
+    string title = 1;
+    string description = 2;
+    string file_extension = 3; 
+}
+
+message CreateVideoResponse {
+    string video_id = 1;
+    string upload_url = 2; 
+}
+
+message CompleteUploadRequest {
+    string video_id = 1;
+}
+
+message CompleteUploadResponse {
+    string video_id = 1;
+    string status = 2;
+}
+
+message GetVideoRequest {
+    string video_id = 1;
+}
+
+message GetVideoResponse {
+    Video video = 1;
+}
+
+message Video {
+    string id = 1;
+    string title = 2;
+    string description = 3;
+    string hls_url = 4;       
+    string thumbnail_url = 5; 
+    int64 views = 6;
+    string status = 7;        
+    string author_id = 8;
+    string created_at = 9;
+}

@@ -2,9 +2,9 @@ package interceptors
 
 import (
 	"context"
+	"strings"
 
-	authpb "github.com/hunderaweke/gostream/gen/go/auth"
-	"github.com/hunderaweke/gostream/pkg/utils"
+	"github.com/hunderaweke/gostream/pkg/utils" // Your JWT utils
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -12,28 +12,39 @@ import (
 )
 
 type AuthInterceptor struct {
-	authClient authpb.AuthServiceClient
+}
+
+func NewAuthInterceptor() *AuthInterceptor {
+	return &AuthInterceptor{}
 }
 
 func (i *AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
-		if info.FullMethod == "/auth.AuthService/login" {
+
+		if strings.Contains(info.FullMethod, "/Login") ||
+			strings.Contains(info.FullMethod, "/Register") {
 			return handler(ctx, req)
 		}
+
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
-			return nil, status.Error(codes.Unauthenticated, "metadeta is not provided")
+			return nil, status.Error(codes.Unauthenticated, "metadata is not provided")
 		}
+
 		values := md["authorization"]
 		if len(values) == 0 {
-			return nil, status.Error(codes.Unauthenticated, "authorization token not found")
+			return nil, status.Error(codes.Unauthenticated, "authorization token is not provided")
 		}
-		token := values[0]
-		res, err := i.authClient.Validate(ctx, &authpb.ValidateRequest{Token: token})
+		accessToken := values[0]
+		accessToken = strings.TrimPrefix(accessToken, "Bearer ")
+
+		claims, err := utils.ValidateToken(accessToken, string(utils.AccessToken))
 		if err != nil {
-			return nil, status.Error(codes.Unauthenticated, "token is invalid")
+			return nil, status.Error(codes.Unauthenticated, "access token is invalid: "+err.Error())
 		}
-		newCtx := utils.SetUserID(ctx, res.UserId)
-		return handler(newCtx, nil)
+
+		newCtx := utils.SetUserID(ctx, claims.ID.String())
+
+		return handler(newCtx, req)
 	}
 }
