@@ -13,8 +13,8 @@ import (
 const (
 	AccessToken          = TokenType("access")
 	RefreshToken         = TokenType("refresh")
-	AccessTokenDuration  = time.Hour * 1
-	RefreshTokenDuration = time.Hour * 3
+	AccessTokenDuration  = time.Hour * 4
+	RefreshTokenDuration = time.Hour * 10
 )
 
 type TokenType string

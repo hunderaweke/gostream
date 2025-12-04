@@ -8,10 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
-	"path/filepath"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -23,10 +20,10 @@ import (
 	grpcserver "github.com/hunderaweke/gostream/internal/grpc_server"
 	"github.com/hunderaweke/gostream/internal/queue"
 	"github.com/hunderaweke/gostream/internal/repository"
+	"github.com/hunderaweke/gostream/internal/server/handlers"
 	"github.com/hunderaweke/gostream/internal/usecase"
 	"github.com/hunderaweke/gostream/pkg/interceptors"
 	"github.com/joho/godotenv"
-	"github.com/minio/minio-go/v7"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
@@ -47,15 +44,6 @@ func main() {
 		log.Fatalf("error creating postgres connection: %v", err)
 	}
 	authUsecase := usecase.NewUserUsecase(repository.NewUserRepository(db))
-	// err = usecase.CreateUser(&domain.User{
-	// 	Username:  "hundera",
-	// 	FirstName: "Hundera",
-	// 	LastName:  "Awoke",
-	// 	Password:  "password",
-	// })
-	// if err != nil {
-	// 	log.Printf("error creatin the user: %v", err)
-	// }
 	rmq, err := queue.NewRabbitMQ()
 	if err != nil {
 		log.Fatal(err)
@@ -100,6 +88,9 @@ func main() {
 		}),
 		runtime.WithErrorHandler(customErrorHandler),
 	)
+	rootMux := http.NewServeMux()
+	rootMux.Handle("/", mux)
+	rootMux.HandleFunc("/v1/stream/", handlers.SecureStreamHandler(minioClient, videoUsecase))
 	if err = authpb.RegisterAuthServiceHandlerFromEndpoint(ctx, mux, ":50051", opts); err != nil {
 		log.Fatalf("error registering auth handlers: %v", err)
 	}
@@ -108,7 +99,7 @@ func main() {
 	}
 	httpServer := http.Server{
 		Addr:    ":8080",
-		Handler: allowCORS(mux),
+		Handler: allowCORS(rootMux),
 	}
 	wg.Add(1)
 	go func() {
@@ -119,153 +110,38 @@ func main() {
 		}
 	}()
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := rmq.ConsumeVideoQueue(ctx, minioClient, videoUsecase); err != nil {
+			if ctx.Err() != nil {
+				errChan <- err
+			}
+			return
+		}
+	}()
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	wg.Add(1)
+	select {
+	case err := <-errChan:
+		log.Printf("shutdown triggered by server error: %v", err)
+	case sig := <-sigCh:
+		log.Printf("shutdown triggered by signal: %v", sig)
+	}
+	cancel()
 	go func() {
-		defer wg.Done()
-		select {
-		case err := <-errChan:
-			log.Printf("shutdown triggered by server error: %v", err)
-		case sig := <-sigCh:
-			log.Printf("shutdown triggeted by signal: %v", sig)
-		}
-		cancel()
-		go func() {
-			grpcServer.GracefulStop()
-		}()
-		shutCtx, shutCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer shutCancel()
-		if err := httpServer.Shutdown(shutCtx); err != nil {
-			log.Printf("http server shutdown error: %v", err)
-		}
+		grpcServer.GracefulStop()
 	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		msgs, err := rmq.Channel.Consume(
-			"video_encoding_queue",
-			"",
-			false,
-			false,
-			false,
-			false,
-			nil,
-		)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		for d := range msgs {
-			log.Printf("Received a message: %s", d.Body)
-
-			var job queue.VideoMessage
-			if err := json.Unmarshal(d.Body, &job); err != nil {
-				log.Printf("Error decoding message: %v", err)
-				d.Nack(false, false) // Drop bad message
-				continue
-			}
-
-			if err := processVideo(minioClient, job); err != nil {
-				d.Nack(false, false) // Requeue logic (simplistic)
-				errChan <- fmt.Errorf("❌ Job Failed: %v", err)
-			} else {
-				d.Ack(false)
-			}
-		}
-		sig := <-sigCh
-		if sig != nil {
-			log.Printf("shutdown triggeted by signal: %v", sig)
-			return
-		}
-	}()
+	rmq.Close()
+	shutCtx, shutCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutCancel()
+	if err := httpServer.Shutdown(shutCtx); err != nil {
+		log.Printf("http server shutdown error: %v", err)
+	}
 	wg.Wait()
 	log.Printf("servers stopped, exiting")
 }
-func processVideo(minioClient *database.MinioClient, job queue.VideoMessage) error {
-	// 1. Create Temp Directory
-	tempDir := filepath.Join(os.TempDir(), "transcoder", job.VideoID)
-	os.MkdirAll(tempDir, 0755)
-	defer os.RemoveAll(tempDir) // Cleanup
 
-	localInput := filepath.Join(tempDir, "input.mp4")
-
-	// 2. Download Raw Video
-	log.Printf("Downloading raw video %s...", job.FilePath)
-	// Note: You need to implement DownloadFile in your minio.go helper or use FGetObject directly
-	// For now, assuming you add this helper or use the raw client:
-	err := minioClient.Client.FGetObject(context.Background(), minioClient.Bucket, job.FilePath, localInput, minio.GetObjectOptions{})
-	if err != nil {
-		return fmt.Errorf("download failed: %w", err)
-	}
-
-	// 3. Run FFmpeg (Convert to HLS)
-	outputPlaylist := filepath.Join(tempDir, "index.m3u8")
-	cmd := exec.Command("ffmpeg",
-		"-i", localInput,
-		"-codec:v", "libx264",
-		"-codec:a", "aac",
-		"-hls_time", "10",
-		"-hls_playlist_type", "vod",
-		"-hls_segment_filename", filepath.Join(tempDir, "segment_%03d.ts"),
-		"-start_number", "0",
-		outputPlaylist,
-	)
-
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("ffmpeg failed: %s", string(output))
-	}
-
-	// 4. Upload HLS Files to Public Bucket
-	// Iterate over the generated files (.m3u8 and .ts)
-	files, _ := os.ReadDir(tempDir)
-	for _, f := range files {
-		if f.Name() == "input.mp4" {
-			continue
-		}
-
-		localPath := filepath.Join(tempDir, f.Name())
-		remotePath := fmt.Sprintf("%s/%s", job.VideoID, f.Name())
-
-		contentType := "application/octet-stream"
-		if strings.HasSuffix(f.Name(), ".m3u8") {
-			contentType = "application/x-mpegURL"
-		} else if strings.HasSuffix(f.Name(), ".ts") {
-			contentType = "video/MP2T"
-		}
-		ctx := context.Background()
-		bucket := "hls-videos"
-		exists, errBucketExists := minioClient.Client.BucketExists(ctx, bucket)
-		if errBucketExists == nil && !exists {
-			log.Printf("bucket do not exist creating it ... %v", bucket)
-			if err := minioClient.Client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); err != nil {
-				return fmt.Errorf("failed to create bucket: %w", err)
-			}
-		} else if errBucketExists != nil {
-			return fmt.Errorf("failed to check if bucket exists: %w", errBucketExists)
-		}
-		policy := fmt.Sprintf(`{
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Principal": {"AWS": ["*"]},
-                "Action": ["s3:GetObject"],
-                "Resource": ["arn:aws:s3:::%s/*"]
-            }
-        ]
-    	}`, bucket)
-		minioClient.Client.SetBucketPolicy(ctx, bucket, policy)
-		log.Printf("Uploading %s...", remotePath)
-		_, err := minioClient.Client.FPutObject(context.Background(), bucket, remotePath, localPath, minio.PutObjectOptions{
-			ContentType: contentType,
-		})
-		if err != nil {
-			return fmt.Errorf("upload failed for %s: %w", f.Name(), err)
-		}
-	}
-	return nil
-}
 func allowCORS(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
