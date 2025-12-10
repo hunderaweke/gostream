@@ -31,7 +31,7 @@ const (
 type VideoServiceClient interface {
 	CreateVideo(ctx context.Context, in *CreateVideoRequest, opts ...grpc.CallOption) (*CreateVideoResponse, error)
 	CompleteUpload(ctx context.Context, in *CompleteUploadRequest, opts ...grpc.CallOption) (*CompleteUploadResponse, error)
-	GetVideo(ctx context.Context, in *GetVideoRequest, opts ...grpc.CallOption) (*GetVideoResponse, error)
+	GetVideo(ctx context.Context, in *GetVideoRequest, opts ...grpc.CallOption) (*Video, error)
 	GetVideos(ctx context.Context, in *GetVideosRequest, opts ...grpc.CallOption) (*GetVideosResponse, error)
 }
 
@@ -63,9 +63,9 @@ func (c *videoServiceClient) CompleteUpload(ctx context.Context, in *CompleteUpl
 	return out, nil
 }
 
-func (c *videoServiceClient) GetVideo(ctx context.Context, in *GetVideoRequest, opts ...grpc.CallOption) (*GetVideoResponse, error) {
+func (c *videoServiceClient) GetVideo(ctx context.Context, in *GetVideoRequest, opts ...grpc.CallOption) (*Video, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetVideoResponse)
+	out := new(Video)
 	err := c.cc.Invoke(ctx, VideoService_GetVideo_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func (c *videoServiceClient) GetVideos(ctx context.Context, in *GetVideosRequest
 type VideoServiceServer interface {
 	CreateVideo(context.Context, *CreateVideoRequest) (*CreateVideoResponse, error)
 	CompleteUpload(context.Context, *CompleteUploadRequest) (*CompleteUploadResponse, error)
-	GetVideo(context.Context, *GetVideoRequest) (*GetVideoResponse, error)
+	GetVideo(context.Context, *GetVideoRequest) (*Video, error)
 	GetVideos(context.Context, *GetVideosRequest) (*GetVideosResponse, error)
 	mustEmbedUnimplementedVideoServiceServer()
 }
@@ -107,7 +107,7 @@ func (UnimplementedVideoServiceServer) CreateVideo(context.Context, *CreateVideo
 func (UnimplementedVideoServiceServer) CompleteUpload(context.Context, *CompleteUploadRequest) (*CompleteUploadResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CompleteUpload not implemented")
 }
-func (UnimplementedVideoServiceServer) GetVideo(context.Context, *GetVideoRequest) (*GetVideoResponse, error) {
+func (UnimplementedVideoServiceServer) GetVideo(context.Context, *GetVideoRequest) (*Video, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetVideo not implemented")
 }
 func (UnimplementedVideoServiceServer) GetVideos(context.Context, *GetVideosRequest) (*GetVideosResponse, error) {

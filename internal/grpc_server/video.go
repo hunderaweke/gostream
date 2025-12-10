@@ -62,12 +62,12 @@ func (s *videoService) CompleteUpload(ctx context.Context, req *videopb.Complete
 		Status:  string(domain.VideoStatusProcessing),
 	}, nil
 }
-func (s *videoService) GetVideo(ctx context.Context, req *videopb.GetVideoRequest) (*videopb.GetVideoResponse, error) {
+func (s *videoService) GetVideo(ctx context.Context, req *videopb.GetVideoRequest) (*videopb.Video, error) {
 	video, err := s.usecase.FindByID(req.GetVideoId())
 	if err != nil {
 		return nil, fmt.Errorf("error getting video with id: %s (%v)", req.GetVideoId(), err)
 	}
-	return &videopb.GetVideoResponse{Video: convertToGrpcVideo(*video)}, nil
+	return convertToGrpcVideo(*video), nil
 }
 
 func convertToGrpcVideo(v domain.Video) *videopb.Video {

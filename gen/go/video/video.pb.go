@@ -613,12 +613,12 @@ const file_video_proto_rawDesc = "" +
 	"\x06status\x18\a \x01(\tR\x06status\x12\x1b\n" +
 	"\tauthor_id\x18\b \x01(\tR\bauthorId\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\t \x01(\tR\tcreatedAt2\xf6\x03\n" +
+	"created_at\x18\t \x01(\tR\tcreatedAt2\xeb\x03\n" +
 	"\fVideoService\x12s\n" +
 	"\vCreateVideo\x12%.gostream.video.v1.CreateVideoRequest\x1a&.gostream.video.v1.CreateVideoResponse\"\x15\x82\xd3\xe4\x93\x02\x0f:\x01*\"\n" +
 	"/v1/videos\x12\x90\x01\n" +
-	"\x0eCompleteUpload\x12(.gostream.video.v1.CompleteUploadRequest\x1a).gostream.video.v1.CompleteUploadResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/videos/{video_id}/complete\x12r\n" +
-	"\bGetVideo\x12\".gostream.video.v1.GetVideoRequest\x1a#.gostream.video.v1.GetVideoResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/videos/{video_id}\x12j\n" +
+	"\x0eCompleteUpload\x12(.gostream.video.v1.CompleteUploadRequest\x1a).gostream.video.v1.CompleteUploadResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/videos/{video_id}/complete\x12g\n" +
+	"\bGetVideo\x12\".gostream.video.v1.GetVideoRequest\x1a\x18.gostream.video.v1.Video\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/videos/{video_id}\x12j\n" +
 	"\tGetVideos\x12#.gostream.video.v1.GetVideosRequest\x1a$.gostream.video.v1.GetVideosResponse\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
 	"/v1/videosB6Z4github.com/hunderaweke/gostream/gen/go/video;videopbb\x06proto3"
 
@@ -655,7 +655,7 @@ var file_video_proto_depIdxs = []int32{
 	0, // 5: gostream.video.v1.VideoService.GetVideos:input_type -> gostream.video.v1.GetVideosRequest
 	3, // 6: gostream.video.v1.VideoService.CreateVideo:output_type -> gostream.video.v1.CreateVideoResponse
 	5, // 7: gostream.video.v1.VideoService.CompleteUpload:output_type -> gostream.video.v1.CompleteUploadResponse
-	7, // 8: gostream.video.v1.VideoService.GetVideo:output_type -> gostream.video.v1.GetVideoResponse
+	8, // 8: gostream.video.v1.VideoService.GetVideo:output_type -> gostream.video.v1.Video
 	1, // 9: gostream.video.v1.VideoService.GetVideos:output_type -> gostream.video.v1.GetVideosResponse
 	6, // [6:10] is the sub-list for method output_type
 	2, // [2:6] is the sub-list for method input_type
