@@ -20,9 +20,13 @@ func NewAuthInterceptor() *AuthInterceptor {
 
 func (i *AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
-
+		excluded := map[string]struct{}{
+			"/gostream.video.v1.VideoService/GetVideos": {},
+			"/gostream.video.v1.VideoService/GetVideo":  {},
+		}
+		_, ok := excluded[info.FullMethod]
 		if strings.Contains(info.FullMethod, "/Login") ||
-			strings.Contains(info.FullMethod, "/Register") {
+			strings.Contains(info.FullMethod, "/Register") || ok {
 			return handler(ctx, req)
 		}
 

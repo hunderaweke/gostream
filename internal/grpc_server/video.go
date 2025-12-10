@@ -62,6 +62,14 @@ func (s *videoService) CompleteUpload(ctx context.Context, req *videopb.Complete
 		Status:  string(domain.VideoStatusProcessing),
 	}, nil
 }
+func (s *videoService) GetVideo(ctx context.Context, req *videopb.GetVideoRequest) (*videopb.GetVideoResponse, error) {
+	video, err := s.usecase.FindByID(req.GetVideoId())
+	if err != nil {
+		return nil, fmt.Errorf("error getting video with id: %s (%v)", req.GetVideoId(), err)
+	}
+	return &videopb.GetVideoResponse{Video: convertToGrpcVideo(*video)}, nil
+}
+
 func convertToGrpcVideo(v domain.Video) *videopb.Video {
 	return &videopb.Video{
 		Id:           v.ID.String(),
@@ -83,19 +91,18 @@ func convertToGrpcVideos(videos []domain.Video) []*videopb.Video {
 }
 
 func (s *videoService) GetVideos(ctx context.Context, req *videopb.GetVideosRequest) (*videopb.GetVideosResponse, error) {
-	userId, err := utils.GetUserID(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error finding user id: %v", err)
-	}
-	resp, err := s.usecase.Find(domain.VideoFetchOptions{
-		UserID: userId,
+	opts := domain.VideoFetchOptions{
 		Status: domain.VideoStatus(req.GetStatus()),
 		BaseFetchOptions: domain.BaseFetchOptions{
 			Page:  int(req.GetPage()),
 			Limit: int(req.GetLimit()),
 			Query: req.GetQuery(),
 		},
-	})
+	}
+	if req.UserId != "" {
+		opts.UserID = req.GetUserId()
+	}
+	resp, err := s.usecase.Find(opts)
 	if err != nil {
 		return nil, fmt.Errorf("error getting multiple videos: %v", err)
 	}

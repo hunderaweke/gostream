@@ -31,7 +31,6 @@ func SecureStreamHandler(minioClient *database.MinioClient, videoService domain.
 			fileName = parts[1]
 		}
 
-		// If no file specified and ?info=true, return video metadata + playlist
 		if fileName == "" && r.URL.Query().Get("info") == "true" {
 			video, err := videoService.FindByID(videoID)
 			if err != nil {
@@ -43,7 +42,6 @@ func SecureStreamHandler(minioClient *database.MinioClient, videoService domain.
 				return
 			}
 
-			// Get playlist
 			obj, err := minioClient.Client.GetObject(r.Context(), "hls-videos", videoID+"/index.m3u8", minio.GetObjectOptions{})
 			if err != nil {
 				http.Error(w, "Playlist not found", http.StatusNotFound)
@@ -73,11 +71,9 @@ func SecureStreamHandler(minioClient *database.MinioClient, videoService domain.
 			return
 		}
 
-		// Default to index.m3u8 if no filename
 		if fileName == "" {
 			fileName = "index.m3u8"
 		}
-
 		objectPath := fmt.Sprintf("%s/%s", videoID, fileName)
 		obj, err := minioClient.Client.GetObject(r.Context(), "hls-videos", objectPath, minio.GetObjectOptions{})
 		if err != nil {
@@ -85,17 +81,14 @@ func SecureStreamHandler(minioClient *database.MinioClient, videoService domain.
 			return
 		}
 		defer obj.Close()
-
 		stat, err := obj.Stat()
 		if err != nil {
 			http.Error(w, "Video segment not found", http.StatusNotFound)
 			return
 		}
-
 		if strings.HasSuffix(fileName, ".m3u8") {
 			w.Header().Set("Content-Type", "application/x-mpegURL")
 			w.Header().Set("Cache-Control", "no-cache")
-
 			scanner := bufio.NewScanner(obj)
 			var rewritten strings.Builder
 			for scanner.Scan() {

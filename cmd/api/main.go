@@ -90,7 +90,8 @@ func main() {
 	)
 	rootMux := http.NewServeMux()
 	rootMux.Handle("/", mux)
-	rootMux.HandleFunc("/v1/stream/", handlers.SecureStreamHandler(minioClient, videoUsecase))
+	rootMux.HandleFunc("GET /v1/stream/", handlers.SecureStreamHandler(minioClient, videoUsecase))
+	rootMux.HandleFunc("POST /v1/upload/{video_id}", handlers.SecureUploadHandler(minioClient, videoUsecase))
 	if err = authpb.RegisterAuthServiceHandlerFromEndpoint(ctx, mux, ":50051", opts); err != nil {
 		log.Fatalf("error registering auth handlers: %v", err)
 	}

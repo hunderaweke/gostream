@@ -171,6 +171,7 @@ func processVideo(minioClient *database.MinioClient, job VideoMessage) error {
 			return fmt.Errorf("upload failed for %s: %w", f.Name(), err)
 		}
 	}
+	log.Printf("Finished processing video")
 	return nil
 }
 func (r *RabbitMQ) Close() {
